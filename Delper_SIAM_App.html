@@ -1,0 +1,778 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Delper SIAM — Service Integration & Management Console</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
+
+/* ── RESET & TOKENS ── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:      #07090f;
+  --bg2:     #0c1018;
+  --bg3:     #111820;
+  --panel:   #141c26;
+  --panel2:  #1a2332;
+  --border:  rgba(255,255,255,.07);
+  --border2: rgba(255,255,255,.13);
+  --gold:    #f0b429;
+  --coral:   #ff5533;
+  --mint:    #00e5b0;
+  --violet:  #a78bfa;
+  --cyan:    #22d3ee;
+  --amber:   #fbbf24;
+  --rose:    #fb7185;
+  --sky:     #38bdf8;
+  --green:   #34d399;
+  --text:    #e2e8f4;
+  --text2:   #7a92b0;
+  --text3:   #3a5470;
+  --mono:    'Space Mono',monospace;
+  --sans:    'Space Grotesk',sans-serif;
+}
+html,body{height:100%;overflow:hidden}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13px;-webkit-font-smoothing:antialiased}
+
+/* ── LAYOUT ── */
+.app{display:grid;grid-template-rows:52px 1fr;grid-template-columns:220px 1fr 300px;height:100vh}
+.topbar{grid-column:1/-1;grid-row:1;display:flex;align-items:center;padding:0 18px;gap:16px;
+  background:var(--bg2);border-bottom:1px solid var(--border2);z-index:100}
+.sidebar{grid-column:1;grid-row:2;background:var(--bg2);border-right:1px solid var(--border);
+  display:flex;flex-direction:column;overflow:hidden}
+.main{grid-column:2;grid-row:2;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px}
+.rightpanel{grid-column:3;grid-row:2;background:var(--bg2);border-left:1px solid var(--border);
+  display:flex;flex-direction:column;overflow:hidden}
+
+/* ── TOPBAR ── */
+.tb-logo{font-family:var(--mono);font-size:12px;font-weight:700;color:var(--gold);
+  letter-spacing:.12em;text-transform:uppercase;flex-shrink:0}
+.tb-sep{width:1px;height:24px;background:var(--border2)}
+.tb-title{font-size:12px;color:var(--text2);letter-spacing:.06em;text-transform:uppercase;
+  font-family:var(--mono)}
+.tb-status{display:flex;align-items:center;gap:6px;margin-left:auto}
+.status-dot{width:7px;height:7px;border-radius:50%;background:var(--mint);
+  box-shadow:0 0 6px var(--mint);animation:pulse-green 2s ease-in-out infinite}
+@keyframes pulse-green{0%,100%{opacity:1}50%{opacity:.4}}
+.tb-stat{font-family:var(--mono);font-size:10px;color:var(--text2);margin-left:12px}
+.tb-stat span{color:var(--mint);font-weight:700}
+.tb-time{font-family:var(--mono);font-size:11px;color:var(--text3);margin-left:16px}
+
+/* ── SIDEBAR ── */
+.sb-section{padding:12px 0;border-bottom:1px solid var(--border)}
+.sb-label{font-family:var(--mono);font-size:8px;letter-spacing:.2em;text-transform:uppercase;
+  color:var(--text3);padding:0 14px;margin-bottom:6px}
+.sb-item{display:flex;align-items:center;gap:10px;padding:8px 14px;cursor:pointer;
+  transition:background .15s;border-left:2px solid transparent}
+.sb-item:hover{background:var(--bg3)}
+.sb-item.active{background:rgba(240,180,41,.06);border-left-color:var(--gold)}
+.sb-icon{font-size:14px;width:18px;text-align:center}
+.sb-name{font-size:12px;color:var(--text2)}
+.sb-item.active .sb-name{color:var(--text);font-weight:600}
+.sb-badge{margin-left:auto;font-family:var(--mono);font-size:9px;
+  background:var(--coral);color:#fff;padding:1px 5px;border-radius:3px}
+.sb-badge.ok{background:rgba(52,211,153,.2);color:var(--green)}
+.sb-badge.warn{background:rgba(251,191,36,.2);color:var(--amber)}
+
+/* ── KPI ROW ── */
+.kpi-row{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}
+.kpi-card{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:12px 14px;
+  position:relative;overflow:hidden}
+.kpi-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
+.kpi-gold::before{background:var(--gold)}
+.kpi-mint::before{background:var(--mint)}
+.kpi-coral::before{background:var(--coral)}
+.kpi-violet::before{background:var(--violet)}
+.kpi-cyan::before{background:var(--cyan)}
+.kpi-val{font-family:var(--mono);font-size:20px;font-weight:700;margin-bottom:2px}
+.kpi-gold .kpi-val{color:var(--gold)}
+.kpi-mint .kpi-val{color:var(--mint)}
+.kpi-coral .kpi-val{color:var(--coral)}
+.kpi-violet .kpi-val{color:var(--violet)}
+.kpi-cyan .kpi-val{color:var(--cyan)}
+.kpi-lbl{font-size:10px;color:var(--text3);letter-spacing:.04em;text-transform:uppercase}
+.kpi-delta{font-family:var(--mono);font-size:9px;color:var(--green);margin-top:4px}
+
+/* ── TRANSACTION INPUT BOX ── */
+.tx-input-box{background:var(--panel);border:1px solid var(--border2);border-radius:10px;padding:16px;
+  border-top:3px solid var(--gold)}
+.tx-input-title{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--gold);margin-bottom:14px;
+  display:flex;align-items:center;gap:8px}
+.tx-input-title::before{content:'⬡';font-size:14px}
+.tx-form{display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:10px;align-items:end}
+.tx-field{display:flex;flex-direction:column;gap:5px}
+.tx-field label{font-family:var(--mono);font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--text3)}
+.tx-input{background:var(--bg3);border:1px solid var(--border2);border-radius:5px;
+  padding:8px 12px;font-family:var(--mono);font-size:13px;color:var(--text);
+  outline:none;transition:border-color .18s,box-shadow .18s;width:100%}
+.tx-input:focus{border-color:var(--gold);box-shadow:0 0 0 2px rgba(240,180,41,.15)}
+.tx-input::placeholder{color:var(--text3)}
+.tx-select{background:var(--bg3);border:1px solid var(--border2);border-radius:5px;
+  padding:8px 12px;font-family:var(--mono);font-size:12px;color:var(--text);
+  outline:none;width:100%;cursor:pointer;transition:border-color .18s}
+.tx-select:focus{border-color:var(--gold)}
+.tx-submit{background:var(--gold);color:#07090f;border:none;border-radius:5px;
+  padding:9px 22px;font-family:var(--mono);font-size:11px;font-weight:700;
+  letter-spacing:.1em;text-transform:uppercase;cursor:pointer;
+  transition:background .18s,transform .12s;white-space:nowrap;height:36px}
+.tx-submit:hover{background:#ffc93d;transform:translateY(-1px)}
+.tx-submit:active{transform:translateY(0)}
+.tx-meta{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px;
+  padding-top:10px;border-top:1px solid var(--border)}
+.tx-meta-item{font-family:var(--mono);font-size:9px;color:var(--text3)}
+.tx-meta-item span{display:block;color:var(--text2);font-size:10px;margin-top:2px}
+/* validation states */
+.tx-input.valid{border-color:rgba(52,211,153,.5)}
+.tx-input.error{border-color:rgba(255,85,51,.5)}
+.tx-hint{font-size:9px;margin-top:3px;height:12px}
+.tx-hint.ok{color:var(--green)}
+.tx-hint.err{color:var(--coral)}
+
+/* ── GRID: 2-col ── */
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+
+/* ── PANEL CARDS ── */
+.card{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:14px}
+.card-title{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--text3);margin-bottom:12px;
+  display:flex;align-items:center;justify-content:space-between}
+.card-title-accent{color:var(--mint)}
+
+/* ── FEED / LOG ── */
+.feed{display:flex;flex-direction:column;gap:1px;max-height:160px;overflow-y:auto}
+.feed::-webkit-scrollbar{width:4px}
+.feed::-webkit-scrollbar-track{background:transparent}
+.feed::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+.feed-row{display:grid;grid-template-columns:70px 60px 1fr 80px;gap:8px;
+  align-items:center;padding:5px 8px;border-radius:4px;transition:background .1s}
+.feed-row:hover{background:var(--bg3)}
+.feed-row.alert{background:rgba(255,85,51,.06)}
+.feed-time{font-family:var(--mono);font-size:9px;color:var(--text3)}
+.feed-src{font-family:var(--mono);font-size:9px;color:var(--cyan)}
+.feed-msg{font-size:11px;color:var(--text2)}
+.feed-msg strong{color:var(--text);font-weight:600}
+.feed-status{font-family:var(--mono);font-size:9px;text-align:right;font-weight:700}
+.fs-ok{color:var(--mint)}
+.fs-warn{color:var(--amber)}
+.fs-alert{color:var(--coral)}
+.fs-info{color:var(--cyan)}
+
+/* ── TPS CHART ── */
+.tps-chart{position:relative;height:70px}
+.tps-bars{display:flex;align-items:flex-end;gap:2px;height:100%}
+.tps-bar{flex:1;border-radius:2px 2px 0 0;transition:height .3s ease;min-width:4px}
+.tps-bar.active{background:var(--mint)}
+.tps-bar.warn{background:var(--amber)}
+.tps-bar.low{background:var(--border2)}
+.tps-label{display:flex;justify-content:space-between;margin-top:4px}
+.tps-label span{font-family:var(--mono);font-size:8px;color:var(--text3)}
+
+/* ── PROVIDER GRID ── */
+.provider-grid{display:flex;flex-direction:column;gap:6px}
+.provider-row{display:flex;align-items:center;gap:10px;padding:6px 8px;
+  background:var(--bg3);border-radius:5px;border:1px solid var(--border)}
+.prov-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.prov-dot.up{background:var(--mint);box-shadow:0 0 4px var(--mint)}
+.prov-dot.warn{background:var(--amber);box-shadow:0 0 4px var(--amber)}
+.prov-dot.down{background:var(--coral);box-shadow:0 0 4px var(--coral)}
+.prov-name{font-size:11px;color:var(--text);flex:1}
+.prov-sla{font-family:var(--mono);font-size:9px;color:var(--text3)}
+.prov-latency{font-family:var(--mono);font-size:9px;color:var(--mint);text-align:right}
+
+/* ── AGENT CARDS ── */
+.agent-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.agent-card{background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:10px;
+  cursor:pointer;transition:border-color .18s,background .18s}
+.agent-card:hover{border-color:var(--violet);background:rgba(167,139,250,.05)}
+.agent-card.active{border-color:var(--violet);background:rgba(167,139,250,.08)}
+.agent-num{font-family:var(--mono);font-size:8px;color:var(--violet);letter-spacing:.1em;
+  text-transform:uppercase;margin-bottom:3px}
+.agent-name{font-size:11px;color:var(--text);font-weight:600;margin-bottom:2px}
+.agent-model{font-family:var(--mono);font-size:8px;color:var(--text3)}
+.agent-status{display:flex;align-items:center;gap:5px;margin-top:6px}
+.agent-dot{width:5px;height:5px;border-radius:50%;background:var(--mint)}
+.agent-qps{font-family:var(--mono);font-size:9px;color:var(--mint)}
+
+/* ── RIGHT PANEL ── */
+.rp-header{padding:12px 14px;border-bottom:1px solid var(--border);
+  font-family:var(--mono);font-size:9px;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--text3);display:flex;align-items:center;justify-content:space-between}
+.rp-body{flex:1;overflow-y:auto;padding:12px}
+.rp-body::-webkit-scrollbar{width:3px}
+.rp-body::-webkit-scrollbar-thumb{background:var(--border2)}
+.incident-list{display:flex;flex-direction:column;gap:6px}
+.incident{background:var(--bg3);border:1px solid var(--border);border-radius:6px;
+  padding:10px;border-left:3px solid var(--amber)}
+.incident.p1{border-left-color:var(--coral)}
+.incident.p2{border-left-color:var(--amber)}
+.incident.ok{border-left-color:var(--mint)}
+.inc-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px}
+.inc-id{font-family:var(--mono);font-size:9px;color:var(--text3)}
+.inc-sev{font-family:var(--mono);font-size:8px;padding:1px 6px;border-radius:2px;font-weight:700}
+.sev-p1{background:rgba(255,85,51,.2);color:var(--coral)}
+.sev-p2{background:rgba(251,191,36,.2);color:var(--amber)}
+.sev-ok{background:rgba(52,211,153,.2);color:var(--green)}
+.inc-title{font-size:11px;color:var(--text);font-weight:600;margin-bottom:3px}
+.inc-meta{font-size:10px;color:var(--text3)}
+.rp-section{margin-bottom:16px}
+.rp-sec-title{font-family:var(--mono);font-size:8px;letter-spacing:.18em;text-transform:uppercase;
+  color:var(--text3);margin-bottom:8px;padding-bottom:5px;border-bottom:1px solid var(--border)}
+
+/* ── TX RESULT BANNER ── */
+.tx-result{display:none;border-radius:6px;padding:10px 14px;margin-top:10px;
+  font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.06em;
+  align-items:center;gap:10px}
+.tx-result.show{display:flex}
+.tx-result.success{background:rgba(0,229,176,.1);border:1px solid rgba(0,229,176,.3);color:var(--mint)}
+.tx-result.fail{background:rgba(255,85,51,.1);border:1px solid rgba(255,85,51,.3);color:var(--coral)}
+.tx-result.pending{background:rgba(240,180,41,.1);border:1px solid rgba(240,180,41,.3);color:var(--gold)}
+
+/* ── SCROLLBAR MAIN ── */
+.main::-webkit-scrollbar{width:4px}
+.main::-webkit-scrollbar-track{background:transparent}
+.main::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+
+/* ── MINI SPARKLINE ── */
+.spark{display:flex;align-items:flex-end;gap:1px;height:24px}
+.spark-bar{width:4px;border-radius:1px;background:var(--mint);opacity:.6}
+
+/* ── COMPLIANCE MAP ── */
+.compliance-row{display:flex;align-items:center;gap:8px;padding:5px 0;
+  border-bottom:1px solid var(--border)}
+.comp-flag{font-size:14px}
+.comp-country{font-size:11px;color:var(--text);flex:1}
+.comp-status{font-family:var(--mono);font-size:9px;font-weight:700}
+.comp-ok{color:var(--mint)}
+.comp-warn{color:var(--amber)}
+.comp-pending{color:var(--text3)}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ══ TOPBAR ══ -->
+  <div class="topbar">
+    <div class="tb-logo">DELPER ◈ SIAM</div>
+    <div class="tb-sep"></div>
+    <div class="tb-title">Service Integration &amp; Management Console</div>
+    <div class="tb-status">
+      <div class="status-dot"></div>
+      <span style="font-family:var(--mono);font-size:10px;color:var(--mint)">ALL SYSTEMS OPERATIONAL</span>
+    </div>
+    <div class="tb-stat">TPS <span id="live-tps">9,842</span></div>
+    <div class="tb-stat">NODES <span>198/200</span></div>
+    <div class="tb-stat">DPR <span style="color:var(--gold)">$2.41</span></div>
+    <div class="tb-time" id="clock">--:--:-- UTC</div>
+  </div>
+
+  <!-- ══ SIDEBAR ══ -->
+  <div class="sidebar">
+    <div class="sb-section">
+      <div class="sb-label">Navigation</div>
+      <div class="sb-item active" onclick="setView('dashboard')">
+        <span class="sb-icon">⬡</span>
+        <span class="sb-name">Dashboard</span>
+      </div>
+      <div class="sb-item" onclick="setView('transactions')">
+        <span class="sb-icon">⇄</span>
+        <span class="sb-name">Transactions</span>
+        <span class="sb-badge warn">Live</span>
+      </div>
+      <div class="sb-item" onclick="setView('providers')">
+        <span class="sb-icon">◎</span>
+        <span class="sb-name">Providers</span>
+        <span class="sb-badge ok">24</span>
+      </div>
+      <div class="sb-item" onclick="setView('agents')">
+        <span class="sb-icon">◈</span>
+        <span class="sb-name">AI Agents</span>
+        <span class="sb-badge ok">7</span>
+      </div>
+      <div class="sb-item" onclick="setView('compliance')">
+        <span class="sb-icon">⊛</span>
+        <span class="sb-name">Compliance</span>
+      </div>
+    </div>
+    <div class="sb-section">
+      <div class="sb-label">Operations</div>
+      <div class="sb-item" onclick="setView('incidents')">
+        <span class="sb-icon">⚠</span>
+        <span class="sb-name">Incidents</span>
+        <span class="sb-badge" id="inc-count">2</span>
+      </div>
+      <div class="sb-item" onclick="setView('cab')">
+        <span class="sb-icon">⊕</span>
+        <span class="sb-name">Change Board</span>
+      </div>
+      <div class="sb-item" onclick="setView('eth')">
+        <span class="sb-icon">Ξ</span>
+        <span class="sb-name">ETH Treasury</span>
+      </div>
+    </div>
+    <div style="margin-top:auto;padding:12px 14px;border-top:1px solid var(--border)">
+      <div style="font-family:var(--mono);font-size:8px;color:var(--text3);line-height:1.8">
+        SIO CONSOLE v2.6.1<br>
+        Singapore · UTC+8<br>
+        GK Bharta · Admin
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ MAIN CONTENT ══ -->
+  <div class="main" id="main-content">
+
+    <!-- KPI ROW -->
+    <div class="kpi-row">
+      <div class="kpi-card kpi-gold">
+        <div class="kpi-val" id="kpi-tps">9,842</div>
+        <div class="kpi-lbl">Live TPS</div>
+        <div class="kpi-delta">↑ 3.2% vs 1hr avg</div>
+      </div>
+      <div class="kpi-card kpi-mint">
+        <div class="kpi-val">$244.8B</div>
+        <div class="kpi-lbl">ETH Pool / Month</div>
+        <div class="kpi-delta">↑ Floor defended</div>
+      </div>
+      <div class="kpi-card kpi-coral">
+        <div class="kpi-val" id="kpi-merchants">10,241</div>
+        <div class="kpi-lbl">Merchants Today</div>
+        <div class="kpi-delta">↑ 241 above target</div>
+      </div>
+      <div class="kpi-card kpi-violet">
+        <div class="kpi-val">99.999%</div>
+        <div class="kpi-lbl">Platform Uptime</div>
+        <div class="kpi-delta">↔ 30d rolling</div>
+      </div>
+      <div class="kpi-card kpi-cyan">
+        <div class="kpi-val" id="kpi-users">6.00B</div>
+        <div class="kpi-lbl">Active Users</div>
+        <div class="kpi-delta">↑ 12.4M this week</div>
+      </div>
+    </div>
+
+    <!-- TRANSACTION INPUT BOX -->
+    <div class="tx-input-box">
+      <div class="tx-input-title">Submit Transaction</div>
+      <div class="tx-form">
+        <div class="tx-field">
+          <label>Transaction Value (DPR)</label>
+          <input class="tx-input" id="tx-value" type="number" min="0" step="0.01"
+            placeholder="e.g. 1,500.00" oninput="validateTxValue(this)">
+          <div class="tx-hint" id="tx-val-hint"></div>
+        </div>
+        <div class="tx-field">
+          <label>Wallet / Merchant ID</label>
+          <input class="tx-input" id="tx-wallet" type="text"
+            placeholder="e.g. DPR-MX-00441" oninput="validateWallet(this)">
+          <div class="tx-hint" id="tx-wallet-hint"></div>
+        </div>
+        <div class="tx-field">
+          <label>Transaction Type</label>
+          <select class="tx-select" id="tx-type">
+            <option value="">Select type…</option>
+            <option value="pos">POS Payment</option>
+            <option value="mint">DPR Mint</option>
+            <option value="transfer">Token Transfer</option>
+            <option value="redeem">Reward Redemption</option>
+            <option value="settle">Supply Chain Settlement</option>
+            <option value="eth">ETH Pool Rebalance</option>
+          </select>
+        </div>
+        <button class="tx-submit" onclick="submitTransaction()">Submit →</button>
+      </div>
+      <div class="tx-meta">
+        <div class="tx-meta-item">Network<span id="tx-network">Hyperledger Besu</span></div>
+        <div class="tx-meta-item">Layer<span id="tx-layer">L1 Mainnet</span></div>
+        <div class="tx-meta-item">Est. Confirm<span>&lt; 2 seconds</span></div>
+        <div class="tx-meta-item">Agent<span id="tx-agent">Agent 1 · Monitoring</span></div>
+      </div>
+      <div class="tx-result" id="tx-result"></div>
+    </div>
+
+    <!-- TPS + PROVIDER HEALTH -->
+    <div class="grid2">
+      <div class="card">
+        <div class="card-title">TPS — Last 60 Seconds <span class="card-title-accent" id="tps-live-label">9,842 / 50,000 cap</span></div>
+        <div class="tps-chart">
+          <div class="tps-bars" id="tps-bars"></div>
+        </div>
+        <div class="tps-label"><span>60s ago</span><span>now</span></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Provider Health <span class="card-title-accent">24 / 24 Online</span></div>
+        <div class="provider-grid" id="provider-grid"></div>
+      </div>
+    </div>
+
+    <!-- LIVE TX FEED + AGENT GRID -->
+    <div class="grid2">
+      <div class="card">
+        <div class="card-title">Live Transaction Feed <span class="card-title-accent" id="feed-count">—</span></div>
+        <div class="feed" id="tx-feed"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">AI Agents <span class="card-title-accent">7 Active</span></div>
+        <div class="agent-grid" id="agent-grid"></div>
+      </div>
+    </div>
+
+  </div><!-- /main -->
+
+  <!-- ══ RIGHT PANEL ══ -->
+  <div class="rightpanel">
+    <div class="rp-header">
+      Incident Command
+      <span style="color:var(--coral);font-size:9px">2 OPEN</span>
+    </div>
+    <div class="rp-body">
+
+      <div class="rp-section">
+        <div class="rp-sec-title">Active Incidents</div>
+        <div class="incident-list">
+          <div class="incident p2">
+            <div class="inc-hdr">
+              <span class="inc-id">INC-2024-0891</span>
+              <span class="inc-sev sev-p2">P2</span>
+            </div>
+            <div class="inc-title">Chainlink oracle latency elevated</div>
+            <div class="inc-meta">Agent 1 · Detected 14m ago · ETA 22m</div>
+          </div>
+          <div class="incident p2">
+            <div class="inc-hdr">
+              <span class="inc-id">INC-2024-0890</span>
+              <span class="inc-sev sev-p2">P2</span>
+            </div>
+            <div class="inc-title">Sumsub KYC API — elevated response time</div>
+            <div class="inc-meta">Agent 3 · Detected 31m ago · Jumio fallback active</div>
+          </div>
+          <div class="incident ok">
+            <div class="inc-hdr">
+              <span class="inc-id">INC-2024-0889</span>
+              <span class="inc-sev sev-ok">Resolved</span>
+            </div>
+            <div class="inc-title">Node 147 consensus lag — self-healed</div>
+            <div class="inc-meta">Resolved 2h ago · RCA pending</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="rp-section">
+        <div class="rp-sec-title">Compliance — 60 Jurisdictions</div>
+        <div id="compliance-list"></div>
+      </div>
+
+      <div class="rp-section">
+        <div class="rp-sec-title">Change Board Queue</div>
+        <div style="display:flex;flex-direction:column;gap:5px">
+          <div style="background:var(--bg3);border-radius:4px;padding:8px;border:1px solid var(--border)">
+            <div style="font-size:10px;color:var(--text);font-weight:600">PQC Key Rotation — Nodes 1–50</div>
+            <div style="font-size:9px;color:var(--text3);margin-top:2px">Scheduled · CAB approved · 03:00 UTC</div>
+          </div>
+          <div style="background:var(--bg3);border-radius:4px;padding:8px;border:1px solid var(--border)">
+            <div style="font-size:10px;color:var(--text);font-weight:600">Kubernetes — Node pool scale-up</div>
+            <div style="font-size:9px;color:var(--text3);margin-top:2px">Pending approval · CTO review</div>
+          </div>
+          <div style="background:var(--bg3);border-radius:4px;padding:8px;border:1px solid var(--border)">
+            <div style="font-size:10px;color:var(--text);font-weight:600">Hyperledger v3.2 patch</div>
+            <div style="font-size:9px;color:var(--amber);margin-top:2px">⚠ Risk: Medium · Emergency CAB required</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="rp-section">
+        <div class="rp-sec-title">ETH Pool Status</div>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <div style="display:flex;justify-content:space-between;font-size:11px">
+            <span style="color:var(--text2)">Pool Balance</span>
+            <span style="font-family:var(--mono);color:var(--gold);font-weight:700">Ξ 62.4M ETH</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:11px">
+            <span style="color:var(--text2)">DPR Floor Price</span>
+            <span style="font-family:var(--mono);color:var(--mint)">$2.41 · Defended</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:11px">
+            <span style="color:var(--text2)">Last Buyback</span>
+            <span style="font-family:var(--mono);color:var(--text3)">4m ago · $12.3M</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:11px">
+            <span style="color:var(--text2)">Custody</span>
+            <span style="font-family:var(--mono);color:var(--text3)">Fireblocks MPC</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div><!-- /app -->
+
+<script>
+// ── CLOCK ──────────────────────────────────────────────────────
+function updateClock(){
+  const now = new Date();
+  const h = String(now.getUTCHours()).padStart(2,'0');
+  const m = String(now.getUTCMinutes()).padStart(2,'0');
+  const s = String(now.getUTCSeconds()).padStart(2,'0');
+  document.getElementById('clock').textContent = h+':'+m+':'+s+' UTC';
+}
+setInterval(updateClock,1000);
+updateClock();
+
+// ── SIDEBAR VIEW ──────────────────────────────────────────────
+function setView(v){
+  document.querySelectorAll('.sb-item').forEach(el=>el.classList.remove('active'));
+  event.currentTarget.classList.add('active');
+}
+
+// ── PROVIDERS ──────────────────────────────────────────────────
+const PROVIDERS = [
+  { name:'Hyperledger Besu', sla:'99.999%', lat:'14ms',  status:'up'  },
+  { name:'Anthropic Claude', sla:'99.999%', lat:'42ms',  status:'up'  },
+  { name:'Fireblocks',       sla:'99.999%', lat:'8ms',   status:'up'  },
+  { name:'Chainlink CCIP',   sla:'99.99%',  lat:'210ms', status:'warn'},
+  { name:'SAP Ariba',        sla:'99.99%',  lat:'33ms',  status:'up'  },
+  { name:'Sumsub KYC',       sla:'99.99%',  lat:'480ms', status:'warn'},
+  { name:'Datadog',          sla:'99.9%',   lat:'22ms',  status:'up'  },
+  { name:'Stripe Connect',   sla:'99.95%',  lat:'61ms',  status:'up'  },
+];
+function renderProviders(){
+  const g = document.getElementById('provider-grid');
+  g.innerHTML = PROVIDERS.map(p=>`
+    <div class="provider-row">
+      <div class="prov-dot ${p.status}"></div>
+      <div class="prov-name">${p.name}</div>
+      <div class="prov-sla">${p.sla}</div>
+      <div class="prov-latency">${p.lat}</div>
+    </div>`).join('');
+}
+renderProviders();
+
+// ── AI AGENTS ──────────────────────────────────────────────────
+const AGENTS = [
+  { num:'01', name:'Transaction Intel',    model:'Opus 4.6',           qps:'13,300' },
+  { num:'02', name:'Regulatory',           model:'Opus 4.6 Extended',  qps:'Active' },
+  { num:'03', name:'Merchant Onboarding',  model:'Sonnet 4.6',         qps:'6.2/s'  },
+  { num:'04', name:'City Planning',        model:'Opus 4.6 + CU',      qps:'Active' },
+  { num:'05', name:'Investor Relations',   model:'Opus 4.6',           qps:'Active' },
+  { num:'06', name:'User Engagement',      model:'Haiku 4.5',          qps:'70,000' },
+  { num:'07', name:'ETH Treasury',         model:'Opus 4.6',           qps:'Active' },
+];
+function renderAgents(){
+  const g = document.getElementById('agent-grid');
+  g.innerHTML = AGENTS.map(a=>`
+    <div class="agent-card" onclick="this.classList.toggle('active')">
+      <div class="agent-num">Agent ${a.num}</div>
+      <div class="agent-name">${a.name}</div>
+      <div class="agent-model">${a.model}</div>
+      <div class="agent-status">
+        <div class="agent-dot"></div>
+        <div class="agent-qps">${a.qps}</div>
+      </div>
+    </div>`).join('');
+}
+renderAgents();
+
+// ── TPS BARS ──────────────────────────────────────────────────
+let tpsHistory = Array.from({length:40},()=>Math.floor(8000+Math.random()*3000));
+function renderTPS(){
+  const bars = document.getElementById('tps-bars');
+  const maxVal = 50000;
+  bars.innerHTML = tpsHistory.map((v,i)=>{
+    const h = Math.max(4, Math.round((v/maxVal)*100));
+    const cls = v > 13000 ? 'warn' : i===tpsHistory.length-1 ? 'active' : 'low';
+    return `<div class="tps-bar ${cls}" style="height:${h}%"></div>`;
+  }).join('');
+}
+function tickTPS(){
+  const last = tpsHistory[tpsHistory.length-1];
+  const next = Math.max(7000,Math.min(14000, last + (Math.random()-0.48)*400));
+  tpsHistory.shift();
+  tpsHistory.push(Math.round(next));
+  const cur = tpsHistory[tpsHistory.length-1];
+  document.getElementById('live-tps').textContent = cur.toLocaleString();
+  document.getElementById('kpi-tps').textContent = cur.toLocaleString();
+  document.getElementById('tps-live-label').textContent = cur.toLocaleString()+' / 50,000 cap';
+  renderTPS();
+}
+renderTPS();
+setInterval(tickTPS, 1200);
+
+// ── LIVE TX FEED ──────────────────────────────────────────────
+const TX_TYPES  = ['POS Pay','DPR Mint','Transfer','Redemption','Settlement','KYC Pass','SAR Filed'];
+const TX_STATUS = [
+  {cls:'fs-ok',   label:'CONFIRMED'},
+  {cls:'fs-ok',   label:'CONFIRMED'},
+  {cls:'fs-ok',   label:'CONFIRMED'},
+  {cls:'fs-info', label:'PENDING'},
+  {cls:'fs-warn', label:'REVIEW'},
+];
+const TX_SOURCES = ['PAX-A920','Hyperledger','Agent 1','Agent 3','Stripe','SAP'];
+let feedCount = 0;
+function addFeedRow(){
+  feedCount++;
+  const now = new Date();
+  const ts = `${String(now.getUTCHours()).padStart(2,'0')}:${String(now.getUTCMinutes()).padStart(2,'0')}:${String(now.getUTCSeconds()).padStart(2,'0')}`;
+  const type = TX_TYPES[Math.floor(Math.random()*TX_TYPES.length)];
+  const src  = TX_SOURCES[Math.floor(Math.random()*TX_SOURCES.length)];
+  const st   = TX_STATUS[Math.floor(Math.random()*TX_STATUS.length)];
+  const amt  = (Math.random()*50000+10).toFixed(2);
+  const isAlert = Math.random()<0.05;
+  const feed = document.getElementById('tx-feed');
+  const row = document.createElement('div');
+  row.className = 'feed-row' + (isAlert ? ' alert' : '');
+  row.innerHTML = `
+    <div class="feed-time">${ts}</div>
+    <div class="feed-src">${src}</div>
+    <div class="feed-msg"><strong>${type}</strong> · DPR ${parseFloat(amt).toLocaleString()}</div>
+    <div class="feed-status ${st.cls}">${st.label}</div>`;
+  feed.insertBefore(row, feed.firstChild);
+  if(feed.children.length > 30) feed.removeChild(feed.lastChild);
+  document.getElementById('feed-count').textContent = feedCount.toLocaleString()+' events';
+}
+setInterval(addFeedRow, 400);
+
+// ── COMPLIANCE ──────────────────────────────────────────────────
+const COUNTRIES = [
+  {flag:'🇸🇬',name:'Singapore',   status:'ok',    label:'Active'},
+  {flag:'🇦🇪',name:'UAE',          status:'ok',    label:'Active'},
+  {flag:'🇬🇧',name:'United Kingdom',status:'ok',   label:'Active'},
+  {flag:'🇺🇸',name:'United States', status:'warn', label:'Review'},
+  {flag:'🇮🇳',name:'India',        status:'ok',    label:'Active'},
+  {flag:'🇩🇪',name:'Germany',      status:'ok',    label:'Active'},
+  {flag:'🇯🇵',name:'Japan',        status:'pending',label:'Pending'},
+  {flag:'🇧🇷',name:'Brazil',       status:'ok',    label:'Active'},
+];
+function renderCompliance(){
+  const el = document.getElementById('compliance-list');
+  el.innerHTML = COUNTRIES.map(c=>`
+    <div class="compliance-row">
+      <span class="comp-flag">${c.flag}</span>
+      <span class="comp-country">${c.name}</span>
+      <span class="comp-status comp-${c.status}">${c.label}</span>
+    </div>`).join('');
+}
+renderCompliance();
+
+// ── TRANSACTION INPUT VALIDATION ──────────────────────────────
+function validateTxValue(el){
+  const val = parseFloat(el.value);
+  const hint = document.getElementById('tx-val-hint');
+  // update network/layer based on value
+  const type = document.getElementById('tx-type').value;
+  if(!el.value){ el.className='tx-input'; hint.textContent=''; hint.className='tx-hint'; return; }
+  if(isNaN(val)||val<=0){ el.className='tx-input error'; hint.textContent='Value must be > 0'; hint.className='tx-hint err'; return; }
+  if(val>10000000){ el.className='tx-input warn'; hint.textContent='⚠ Large tx — requires CTO approval'; hint.className='tx-hint err'; return; }
+  el.className='tx-input valid';
+  hint.textContent='✓ Value valid · DPR '+val.toLocaleString();
+  hint.className='tx-hint ok';
+  // update meta
+  if(val>500000){
+    document.getElementById('tx-agent').textContent='Agent 7 · Treasury Review';
+  } else {
+    document.getElementById('tx-agent').textContent='Agent 1 · Monitoring';
+  }
+}
+
+function validateWallet(el){
+  const hint = document.getElementById('tx-wallet-hint');
+  if(!el.value){ el.className='tx-input'; hint.textContent=''; hint.className='tx-hint'; return; }
+  const ok = /^[A-Z0-9\-]{4,24}$/.test(el.value.toUpperCase());
+  if(ok){
+    el.className='tx-input valid';
+    hint.textContent='✓ Wallet ID valid';
+    hint.className='tx-hint ok';
+  } else {
+    el.className='tx-input error';
+    hint.textContent='Format: DPR-XX-00000';
+    hint.className='tx-hint err';
+  }
+}
+
+// Update network/layer when type changes
+document.getElementById('tx-type').addEventListener('change', function(){
+  const netMap = {
+    pos:'Hyperledger Besu', mint:'Hyperledger Besu',
+    transfer:'Ethereum L2 · Arbitrum', redeem:'Hyperledger Besu',
+    settle:'ISO 20022 · Finastra', eth:'Ethereum Mainnet'
+  };
+  const layerMap = {
+    pos:'L1 Mainnet', mint:'L1 Mainnet',
+    transfer:'L2 Arbitrum', redeem:'L1 Mainnet',
+    settle:'Bank Rail', eth:'ETH Mainnet'
+  };
+  const agentMap = {
+    pos:'Agent 1 · Monitoring', mint:'Agent 1 · Monitoring',
+    transfer:'Agent 1 · Monitoring', redeem:'Agent 6 · Rewards',
+    settle:'Agent 1 · Supply Chain', eth:'Agent 7 · Treasury'
+  };
+  document.getElementById('tx-network').textContent = netMap[this.value]||'Hyperledger Besu';
+  document.getElementById('tx-layer').textContent   = layerMap[this.value]||'L1 Mainnet';
+  document.getElementById('tx-agent').textContent   = agentMap[this.value]||'Agent 1 · Monitoring';
+});
+
+// ── SUBMIT TRANSACTION ──────────────────────────────────────────
+function submitTransaction(){
+  const val    = document.getElementById('tx-value').value;
+  const wallet = document.getElementById('tx-wallet').value;
+  const type   = document.getElementById('tx-type').value;
+  const result = document.getElementById('tx-result');
+
+  // basic validation
+  if(!val || parseFloat(val)<=0){
+    showResult('fail','⚠  Enter a valid transaction value'); return;
+  }
+  if(!wallet){
+    showResult('fail','⚠  Enter a wallet or merchant ID'); return;
+  }
+  if(!type){
+    showResult('fail','⚠  Select a transaction type'); return;
+  }
+
+  // large tx warning
+  if(parseFloat(val)>10000000){
+    showResult('fail','⚠  Value exceeds $10M — CTO approval required before submission'); return;
+  }
+
+  // simulate pending → confirmed
+  showResult('pending','⟳  Submitting to '+document.getElementById('tx-network').textContent+'…');
+
+  setTimeout(()=>{
+    const txHash = 'TX-'+Date.now().toString(36).toUpperCase();
+    const dprVal = parseFloat(val).toLocaleString();
+    // ~5% chance of review
+    if(Math.random()<0.05){
+      showResult('fail','⚠  Transaction flagged for AML review · Chainalysis Reactor · Ref: '+txHash);
+    } else {
+      showResult('success','✓  Confirmed · DPR '+dprVal+' · '+txHash+' · <2s · Agent 1 logged');
+      feedCount++;
+      // inject into feed
+      const now = new Date();
+      const ts = `${String(now.getUTCHours()).padStart(2,'0')}:${String(now.getUTCMinutes()).padStart(2,'0')}:${String(now.getUTCSeconds()).padStart(2,'0')}`;
+      const feed = document.getElementById('tx-feed');
+      const row = document.createElement('div');
+      row.className = 'feed-row';
+      row.style.background='rgba(0,229,176,.06)';
+      row.innerHTML = `
+        <div class="feed-time">${ts}</div>
+        <div class="feed-src" style="color:var(--gold)">MANUAL</div>
+        <div class="feed-msg"><strong>${type.toUpperCase()}</strong> · DPR ${dprVal} · ${wallet}</div>
+        <div class="feed-status fs-ok">CONFIRMED</div>`;
+      feed.insertBefore(row, feed.firstChild);
+    }
+  }, 1400);
+}
+
+function showResult(type, msg){
+  const el = document.getElementById('tx-result');
+  el.className = 'tx-result show '+type;
+  el.textContent = msg;
+  if(type==='success'){
+    setTimeout(()=>{ el.className='tx-result'; }, 6000);
+  }
+}
+</script>
+</body>
+</html>
